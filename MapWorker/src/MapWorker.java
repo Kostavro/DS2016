@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -22,11 +21,13 @@ public class MapWorker {
 	private static String dbClass = "com.mysql.jdbc.Driver";
 	private static String query;
 	
-	private static int port = 1821;
-	private static String address = "localhost";
+	private static String rdcaddress = "127.0.0.1";
+	private static int rdcPort = 4323;
+	private static int srvPort = 4322;
 	
 	
-	static double minlat ;
+	
+	static double minlat;
 	static double maxlat ;
 	static double minlon ;
 	static double maxlon ;
@@ -48,34 +49,15 @@ public class MapWorker {
 	String message = null;
 
 	try {
-		socket = new ServerSocket(4321);
+		socket = new ServerSocket(srvPort);
 
 		while (true) {
 			// Auto tha mpei se run function kai tha ulopoihthei mia private class client pou tha tin diathetei gia na uparxei polinimatismos
 			connection = socket.accept();
-
-			ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
-			ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
-			out.writeObject("Connection Successful");
-			out.flush();
-
+			Thread t = new Client(connection);
+			t.start();
 			
-				try {
-					ArrayList<String> order = (ArrayList<String>) in.readObject();
-					query = "SELECT * FROM checkins WHERE latitude BETWEEN "
-							+order.get(0)+" AND "+order.get(1)
-							+" AND longitude BETWEEN "+order.get(2)+" AND "+order.get(3)
-							+" AND time BETWEEN "+order.get(4)+" AND "+order.get(5);
-					Map<String, Long> mapped = map(runQuery(query), topk);
-					System.out.println(Arrays.toString(mapped.entrySet().toArray()));
-				} catch (ClassNotFoundException e) {
-					System.out.println("Data Received to Unknown format");
-				}
-				
-				
-			in.close();
-			out.close();
-			connection.close();
+			
 		}
 	} catch (IOException e) {
 		// TODO: handle exception
@@ -126,4 +108,54 @@ public class MapWorker {
                         (e1, e2) -> e1, LinkedHashMap::new));
 	}
 	
+	
+	
+	
+	static class Client extends Thread{
+		ObjectOutputStream out;
+		ObjectInputStream in ;
+		Socket client;
+		
+		public Client(Socket connection){     
+			client = connection;
+			try {
+				out = new ObjectOutputStream(connection.getOutputStream());
+				in = new ObjectInputStream(connection.getInputStream());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+		}
+		@Override
+		public void run() {
+			try{
+			out.writeObject("Connection Successful");
+			out.flush();
+			
+				try {
+					ArrayList<String> order = (ArrayList<String>) in.readObject();
+					query = "SELECT * FROM checkins WHERE latitude BETWEEN "
+							+order.get(0)+" AND "+order.get(1)
+							+" AND longitude BETWEEN "+order.get(2)+" AND "+order.get(3)
+							+" AND time BETWEEN "+order.get(4)+" AND "+order.get(5);
+					Map<String, Long> mapped = map(runQuery(query), topk);
+					System.out.println(Arrays.toString(mapped.entrySet().toArray()));
+				} catch (ClassNotFoundException e) {
+					System.out.println("Data Received to Unknown format");
+				}
+				
+			out.writeObject("Done");
+			out.flush();
+			
+			in.close();
+			out.close();
+			client.close();
+			}catch(IOException e){
+				System.out.println("Sam ting wong");
+			}
+		}
+	}
+	
 }
+
+
