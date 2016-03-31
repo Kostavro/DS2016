@@ -37,7 +37,7 @@ public class MapWorker {
 	
 	public static void main(String[] args) {
 		
-		topk = 4;
+		topk = 3;
 		startServer();
 
 	
@@ -134,8 +134,8 @@ public class MapWorker {
 			
 				try {
 					ArrayList<String> order = (ArrayList<String>) in.readObject();
-					query = "SELECT * FROM checkins WHERE latitude BETWEEN "
-							+order.get(0)+" AND "+order.get(1)
+					query = "SELECT * FROM checkins WHERE latitude >= "
+							+order.get(0)+" AND latitude < "+order.get(1)
 							+" AND longitude BETWEEN "+order.get(2)+" AND "+order.get(3)
 							+" AND time BETWEEN "+order.get(4)+" AND "+order.get(5);
 					Map<String, Long> mapped = map(runQuery(query), topk);

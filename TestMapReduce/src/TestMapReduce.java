@@ -14,7 +14,7 @@ public class TestMapReduce {
 		
 		
 		Thread maper1 = new Maper(load.get(0),"localhost", 4322);
-		Thread maper2 = new Maper(load.get(1), "172.16.3.9", 4322);
+		Thread maper2 = new Maper(load.get(1), "localhost", 4322);
 		Thread maper3 = new Maper(load.get(2),"localhost" , 4322);
 		maper1.start();
 		maper2.start();	
