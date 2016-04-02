@@ -5,6 +5,8 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Map;
 
 public class TestMapReduce {
 
@@ -20,22 +22,31 @@ public class TestMapReduce {
 		maper2.start();	
 		maper3.start();
 
-		System.out.println(maper1.isAlive());
-		System.out.println(maper2.isAlive());
-		System.out.println(maper3.isAlive());
 		Socket reducer = null;
 		ObjectOutputStream rout;
 		ObjectInputStream rin;
 		
 		while(maper1.isAlive() && maper2.isAlive() && maper3.isAlive()){}
 		
-		System.out.println("Drop it like its hot");
+		
 		
 		try {
-			//reducer = new Socket(InetAddress.getByName("127.0.0.1"), 4323);
+			reducer = new Socket(InetAddress.getByName("127.0.0.1"), 4323);
 			rout = new ObjectOutputStream(reducer.getOutputStream());
 			rin   = new ObjectInputStream(reducer.getInputStream());
 			
+			rout.writeObject("Reduce");
+			rout.flush();
+			try {
+				Map<String, Long>  results = (Map<String, Long>) rin.readObject();
+				System.out.println(Arrays.toString(results.entrySet().toArray()));
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			rout.close();
+			rin.close();
+			reducer.close();
 			
 			
 		} catch (IOException e) {
@@ -50,10 +61,6 @@ public class TestMapReduce {
 	
 	private static ArrayList<ArrayList<String>> splitter(double minlat, double maxlat, double minlong, double maxlong, String startTime, String endTime){
 		double latpart = Math.abs(maxlat - minlat)/3;
-		
-		//double difference = 10^(-14);
-		System.out.println(latpart);
-		
 		
 		ArrayList<String> order1= new ArrayList<String>();
 		ArrayList<String> order2= new ArrayList<String>();
@@ -96,7 +103,6 @@ public class TestMapReduce {
 			this.task = task;
 			this.ip = ip;
 			this.port = port;
-			System.out.println(this.getId());
 		}
 		@Override
 		public void run() {
@@ -104,7 +110,7 @@ public class TestMapReduce {
 			ObjectInputStream in = null;
 			ObjectOutputStream out = null;
 			
-			String message;
+			
 
 			try {
 				socket = new Socket(InetAddress.getByName(ip), port);
@@ -112,13 +118,11 @@ public class TestMapReduce {
 				in = new ObjectInputStream(socket.getInputStream());
 
 				try {
-					message = (String) in.readObject();
-					System.out.println("Server>" + message);
+				
 					
 					out.writeObject(task);
 					out.flush();
 					String answer = (String) in.readObject();
-					System.out.println(answer);
 					
 					
 				} catch (ClassNotFoundException e1) {

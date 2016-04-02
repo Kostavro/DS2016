@@ -1,6 +1,7 @@
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.Connection;
@@ -9,7 +10,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -46,13 +46,12 @@ public class MapWorker {
 	public static void startServer() {
 	ServerSocket socket = null;
 	Socket connection = null;
-	String message = null;
 
 	try {
 		socket = new ServerSocket(srvPort);
 
 		while (true) {
-			// Auto tha mpei se run function kai tha ulopoihthei mia private class client pou tha tin diathetei gia na uparxei polinimatismos
+			
 			connection = socket.accept();
 			Thread t = new Client(connection);
 			t.start();
@@ -114,13 +113,22 @@ public class MapWorker {
 	static class Client extends Thread{
 		ObjectOutputStream out;
 		ObjectInputStream in ;
+		ObjectOutputStream rout;
+		ObjectInputStream rin ;
 		Socket client;
+		Socket reducer;
 		
 		public Client(Socket connection){     
-			client = connection;
+			this.client = connection;
+			
+			
 			try {
+	
+				reducer = new Socket(InetAddress.getByName(rdcaddress), rdcPort);
 				out = new ObjectOutputStream(connection.getOutputStream());
 				in = new ObjectInputStream(connection.getInputStream());
+				rout = new ObjectOutputStream(reducer.getOutputStream());
+				rin = new ObjectInputStream(reducer.getInputStream());		
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -128,21 +136,26 @@ public class MapWorker {
 		}
 		@Override
 		public void run() {
+			ArrayList<String> order;
+			Map<String, Long> mapped = null;
+			
 			try{
-			out.writeObject("Connection Successful");
-			out.flush();
 			
 				try {
-					ArrayList<String> order = (ArrayList<String>) in.readObject();
+					order = (ArrayList<String>) in.readObject();
 					query = "SELECT * FROM checkins WHERE latitude >= "
 							+order.get(0)+" AND latitude < "+order.get(1)
 							+" AND longitude BETWEEN "+order.get(2)+" AND "+order.get(3)
 							+" AND time BETWEEN "+order.get(4)+" AND "+order.get(5);
-					Map<String, Long> mapped = map(runQuery(query), topk);
-					System.out.println(Arrays.toString(mapped.entrySet().toArray()));
+					mapped = map(runQuery(query), topk);
+					//System.out.println(Arrays.toString(mapped.entrySet().toArray()));
 				} catch (ClassNotFoundException e) {
 					System.out.println("Data Received to Unknown format");
 				}
+			//Send data to reducer
+				
+			rout.writeObject(mapped);
+			rout.flush();
 				
 			out.writeObject("Done");
 			out.flush();
