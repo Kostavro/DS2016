@@ -35,8 +35,7 @@ public class TestMapReduce {
 		} catch (InterruptedException e1) {
 			e1.printStackTrace();
 		}
-		System.out.println("All done");
-		
+		 
 		try {
 			reducer = new Socket(InetAddress.getByName("127.0.0.1"), 4323);
 			rout = new ObjectOutputStream(reducer.getOutputStream());
@@ -127,8 +126,7 @@ public class TestMapReduce {
 					
 					out.writeObject(task);
 					out.flush();
-					String mes = (String) in.readObject();
-					System.out.println(mes);
+					in.readObject();
 					
 					
 				} catch (ClassNotFoundException e1) {
