@@ -7,6 +7,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class TestMapReduce {
 
@@ -15,20 +16,26 @@ public class TestMapReduce {
 		ArrayList<ArrayList<String>> load = splitter(40.78,40.88,-74.9,-73.7,"'2012-04-30 00:00:00'","'2012-05-06 00:00:00'");
 		
 		
-		Thread maper1 = new Maper(load.get(0),"localhost", 4322);
-		Thread maper2 = new Maper(load.get(1), "localhost", 4322);
-		Thread maper3 = new Maper(load.get(2),"localhost" , 4322);
-		maper1.start();
-		maper2.start();	
-		maper3.start();
+		Thread mapper1 = new Mapper(load.get(0), "localhost", 4322);
+		Thread mapper2 = new Mapper(load.get(1), "localhost", 4322);
+		Thread mapper3 = new Mapper(load.get(2), "localhost", 4322);
+		mapper1.start();
+		mapper2.start();	
+		mapper3.start();
 
 		Socket reducer = null;
 		ObjectOutputStream rout;
 		ObjectInputStream rin;
 		
-		while(maper1.isAlive() && maper2.isAlive() && maper3.isAlive()){}
+		while(mapper1.isAlive() && mapper2.isAlive() && mapper3.isAlive()){}
 		
 		
+		 try {
+			TimeUnit.SECONDS.sleep(1);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		System.out.println("All done");
 		
 		try {
 			reducer = new Socket(InetAddress.getByName("127.0.0.1"), 4323);
@@ -41,7 +48,6 @@ public class TestMapReduce {
 				Map<String, Long>  results = (Map<String, Long>) rin.readObject();
 				System.out.println(Arrays.toString(results.entrySet().toArray()));
 			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			rout.close();
@@ -50,7 +56,6 @@ public class TestMapReduce {
 			
 			
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
@@ -93,13 +98,13 @@ public class TestMapReduce {
 		load.add(order3);
 		return load;
 	}
-	private static class Maper extends Thread{
+	private static class Mapper extends Thread{
 	
 		ArrayList<String> task;
 		String ip;
 		int port;
 		
-		public Maper(ArrayList<String> task,String ip, int port){
+		public Mapper(ArrayList<String> task,String ip, int port){
 			this.task = task;
 			this.ip = ip;
 			this.port = port;
@@ -122,7 +127,8 @@ public class TestMapReduce {
 					
 					out.writeObject(task);
 					out.flush();
-					String answer = (String) in.readObject();
+					String mes = (String) in.readObject();
+					System.out.println(mes);
 					
 					
 				} catch (ClassNotFoundException e1) {

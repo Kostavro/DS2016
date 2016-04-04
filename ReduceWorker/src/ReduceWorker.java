@@ -8,41 +8,40 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 public class ReduceWorker {
 	
-	static int srvPort = 4323;
-	static Map<String, Long> mapped;
+	private static int srvPort = 4323;
+
 	
 	public static void main(String[] args) {
-		mapped = new HashMap<String, Long>();
 		startServer();
 	}
 	
-	public static void startServer() {
+	private static void startServer() {
 		ServerSocket socket = null;
 		Socket connection = null;
-
+		Map<String, Long> mapped = new HashMap<String, Long>();
+		ReentrantLock lock = new ReentrantLock();
 		try {
 			socket = new ServerSocket(srvPort);
 
 			while (true) {
 				
 				connection = socket.accept();
-				Thread t = new Client(connection);
+				Thread t = new Reducer(connection,mapped,lock);
 				t.start();
 				
 				
 			}
 			
 		} catch (IOException e) {
-			// TODO: handle exception
 			e.printStackTrace();
 		}
 		finally {
 			try {
-				System.out.println("im done");
 				socket.close();
 			}
 			catch (IOException e) {
@@ -50,67 +49,71 @@ public class ReduceWorker {
 			}
 		}
 	}	
+}
+
+class Reducer extends Thread{
+	ObjectOutputStream out;
+	ObjectInputStream in ;
+	Socket client;
+	Map<String, Long> mapped;
+	ReentrantLock lock;
 	
-	public static Map<String, Long> reduce(Map<String, Long> load, int topk){
+	public Reducer(Socket connection, Map<String, Long> mapped, ReentrantLock lock){     
+		this.client = connection;
+		this.mapped = mapped;
+		this.lock = lock;
 		
-		Map<String, Long> results = (Map<String, Long>) load.entrySet().parallelStream()
+		try {
+			out = new ObjectOutputStream(connection.getOutputStream());
+			in = new ObjectInputStream(connection.getInputStream());		
+		} catch (IOException e){
+			e.printStackTrace();
+		}
+		
+	}
+	@Override
+	
+	public void run() {
+		try {
+			try {
+					lock.lock();
+					try {
+						try {
+							mapped.putAll( (Map<String, Long>) in.readObject());
+						
+						} catch (ClassCastException e){
+							out.writeObject(reduce(mapped,4));
+							out.flush();
+							mapped.clear();
+						}
+					}
+					finally{
+						lock.unlock();
+					}
+		
+			
+			
+		} catch (ClassNotFoundException e) {
+			
+			e.printStackTrace();
+		}	
+		
+		in.close();
+		out.close();
+		client.close();
+		} catch (IOException e){
+			System.out.println("Sam ting wong");
+		}
+	}
+	
+private static Map<String, Long> reduce(Map<String, Long> load, int topk){
+		
+		Map<String, Long> results = ((Map<String, Long>) load).entrySet().stream()
 				.sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
 				.limit(topk)
 				.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
                         (e1, e2) -> e1, LinkedHashMap::new));;
 		
 		return results;
-	}
-	
-	
-	static class Client extends Thread{
-		ObjectOutputStream out;
-		ObjectInputStream in ;
-		Socket client;
-
-		
-		public Client(Socket connection){     
-			this.client = connection;
-			
-			
-			try {
-				out = new ObjectOutputStream(connection.getOutputStream());
-				in = new ObjectInputStream(connection.getInputStream());		
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			
-		}
-		@Override
-		
-		public void run() {
-			
-			
-			try{
-				
-				try{
-					try{
-					mapped.putAll((Map<String, Long>) in.readObject());
-					//System.out.println(Arrays.toString(mapped.entrySet().toArray()));
-					}catch(ClassCastException e)
-					{
-					out.writeObject(reduce(mapped,4));
-					out.flush();
-					}
-					
-				
-				
-			} catch (ClassNotFoundException e) {
-				
-				e.printStackTrace();
-			}	
-			
-			in.close();
-			out.close();
-			client.close();
-			}catch(IOException e){
-				System.out.println("Sam ting wong");
-			}
-		}
 	}
 }
