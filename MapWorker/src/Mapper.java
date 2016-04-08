@@ -30,8 +30,8 @@ class Mapper extends Thread{
 	Socket client;
 	Socket reducer;
 	
-	private static CheckIns checkins;
-	private static CheckIns data;
+
+	private static Map<CheckIn, Long> mapped;
 	
 	public Mapper(Socket connection){     
 		this.client = connection;
@@ -49,33 +49,15 @@ class Mapper extends Thread{
 	}
 	@Override
 	public void run() {
+		
 		ArrayList<String> order;
-		Map<String, Long> mapped = null;
-		checkins = new CheckIns();
-		data = new CheckIns();
+		
 		try{
 		
 			try {
 				//Receive order from Client
 				order = (ArrayList<String>) in.readObject();
-				
-				//Build query String
-				query = "SELECT * FROM checkins WHERE latitude >= "
-						+order.get(0)+" AND latitude < "+order.get(1)
-						+" AND longitude BETWEEN "+order.get(2)+" AND "+order.get(3)
-						+" AND time BETWEEN "+order.get(4)+" AND "+order.get(5);
-						//+" AND photos <> 'Not exists'";
-				mapped = map(runQuery(query), topk);
-				for(Map.Entry<String, Long> entry: mapped.entrySet()){
-					for (CheckIn checkin : checkins.getCheckins()) {
-						if(entry.getKey().equals(checkin.getPOI())){
-							data.getCheckins().add(checkin);
-						}
-					}
-					
-				}
-				
-				
+				mapped = map(runQuery(order), topk);
 			} catch (ClassNotFoundException e) {
 				System.out.println("Data Received to Unknown format");
 			}
@@ -92,13 +74,21 @@ class Mapper extends Thread{
 		out.close();
 		client.close();
 		}catch(IOException e){
-			System.out.println("Sam ting wong");
+			System.out.println("IO");
 		}
 	}
 	
-	//Run query and return resulted lines in a string list and fill Checkins array
-	private static ArrayList<String> runQuery(String query){
-		ArrayList<String> poi = new ArrayList<String>();
+	//Run query and return resulted checkins in a Checkins object
+	private static CheckIns runQuery(ArrayList<String> order){
+		
+		//Build query String
+		query = "SELECT * FROM checkins WHERE latitude >= "
+				+order.get(0)+" AND latitude < "+order.get(1)
+				+" AND longitude BETWEEN "+order.get(2)+" AND "+order.get(3)
+				+" AND time BETWEEN "+order.get(4)+" AND "+order.get(5);
+				//+" AND photos <> 'Not exists'";
+		
+		CheckIns checkins = new CheckIns();
 		
 		try {
 			Class.forName(dbClass);
@@ -106,7 +96,6 @@ class Mapper extends Thread{
 				Statement stm = con.createStatement();
 				ResultSet rs = stm.executeQuery(query);
 			while (rs.next()) {
-				poi.add(rs.getString(3));
 				checkins.addCheckin(rs.getString(3), rs.getString(4), rs.getDouble(7),  rs.getDouble(8), rs.getString(10));
 			}
 			con.close();
@@ -116,21 +105,29 @@ class Mapper extends Thread{
 				System.out.println(e.getMessage());
 			}
 		
-		return poi;
+		return checkins;
 	}
 	
 	//map function to find the top k best on the list returned by query
-	private static Map<String, Long> map(ArrayList<String> poi, int k){
+	private static Map<CheckIn, Long> map(CheckIns checkins, int k){
 		
-		Map<String,  Long> pois = poi.parallelStream()
-				.collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 		
-		return pois.entrySet()
+		
+		 checkins.getCheckins()
 				.parallelStream()
-                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
+                .sorted(new Comparator<CheckIn>() {
+
+					@Override
+					public int compare(CheckIn ch1, CheckIn ch2) {
+						// TODO Auto-generated method stub
+						return ch1.getPhotoURL().size() - ch2.getPhotoURL().size();
+					}
+                	
+				})
                 .limit(k)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
-                        (e1, e2) -> e1, LinkedHashMap::new));
+                .collect(Collectors.toMap(CheckIn::POI,);
+               return null;
 	}
+	
 	
 }

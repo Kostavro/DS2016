@@ -2,6 +2,13 @@ import java.util.ArrayList;
 
 public class CheckIns{
 	
+	public ArrayList<CheckIn> getCheckins() {
+		return checkins;
+	}
+	public void setCheckins(ArrayList<CheckIn> checkins) {
+		this.checkins = checkins;
+	}
+
 	ArrayList<CheckIn> checkins;
 	
 	public CheckIns(){
@@ -31,12 +38,5 @@ public class CheckIns{
 			}
 		}
 		return -1;
-	}
-	
-	public ArrayList<CheckIn> getCheckins() {
-		return checkins;
-	}
-	public void setCheckins(ArrayList<CheckIn> checkins) {
-		this.checkins = checkins;
 	}
 }
