@@ -7,14 +7,29 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
 public class TestMapReduce {
 
 	public static void main(String[] args) {
 		
-		ArrayList<ArrayList<String>> load = splitter(40.78,40.88,-74.9,-73.7,"'2012-04-30 00:00:00'","'2012-05-06 00:00:00'");
-		
+		// Read user input
+		System.out.println("Enter Data (minlat, maxlat, minlong, maxlong, startdatetime, enddatetime): \n");
+				
+		Scanner ins = new Scanner(System.in);
+		double minLat = ins.nextDouble();
+		double maxLat = ins.nextDouble();
+		double minLong = ins.nextDouble();
+		double maxLong = ins.nextDouble();
+		ins.nextLine();
+		String startTime = ins.nextLine();
+		String endTime = ins.nextLine();
+		ins.nextLine();
+		ins.close();
+					
+		ArrayList<ArrayList<String>> load = splitter(minLat,maxLat,minLong,maxLong,startTime,endTime);
+				
 		
 		Thread mapper1 = new Mapper(load.get(0), "localhost", 4322);
 		Thread mapper2 = new Mapper(load.get(1), "localhost", 4322);
@@ -37,6 +52,7 @@ public class TestMapReduce {
 		}
 		System.out.println("All done");
 		
+		// Get and show final results
 		try {
 			reducer = new Socket(InetAddress.getByName("127.0.0.1"), 4323);
 			rout = new ObjectOutputStream(reducer.getOutputStream());
@@ -58,12 +74,10 @@ public class TestMapReduce {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-
-		
-		
 	
 	}
 	
+	// Split input data for 3 workers
 	private static ArrayList<ArrayList<String>> splitter(double minlat, double maxlat, double minlong, double maxlong, String startTime, String endTime){
 		double latpart = Math.abs(maxlat - minlat)/3;
 		
@@ -98,6 +112,7 @@ public class TestMapReduce {
 		load.add(order3);
 		return load;
 	}
+	
 	private static class Mapper extends Thread{
 	
 		ArrayList<String> task;
@@ -116,7 +131,6 @@ public class TestMapReduce {
 			ObjectOutputStream out = null;
 			
 			
-
 			try {
 				socket = new Socket(InetAddress.getByName(ip), port);
 				out = new ObjectOutputStream(socket.getOutputStream());
@@ -124,13 +138,11 @@ public class TestMapReduce {
 
 				try {
 				
-					
 					out.writeObject(task);
 					out.flush();
 					String mes = (String) in.readObject();
 					System.out.println(mes);
-					
-					
+						
 				} catch (ClassNotFoundException e1) {
 					System.err.println("Data Received to Unknown Format");
 				}
@@ -152,6 +164,4 @@ public class TestMapReduce {
 
 	}
 }
-
-
 

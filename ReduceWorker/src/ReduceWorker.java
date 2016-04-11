@@ -17,7 +17,9 @@ public class ReduceWorker {
 
 	
 	public static void main(String[] args) {
+		
 		startServer();
+		
 	}
 	
 	private static void startServer() {
@@ -33,7 +35,6 @@ public class ReduceWorker {
 				connection = socket.accept();
 				Thread t = new Reducer(connection,mapped,lock);
 				t.start();
-				
 				
 			}
 			
@@ -76,34 +77,31 @@ class Reducer extends Thread{
 	public void run() {
 		try {
 			try {
-					lock.lock();
+				lock.lock();
+				try {
 					try {
-						try {
-							mapped.putAll( (Map<String, Long>) in.readObject());
-						
-						} catch (ClassCastException e){
-							out.writeObject(reduce(mapped,4));
-							out.flush();
-							mapped.clear();
-						}
+						mapped.putAll( (Map<String, Long>) in.readObject());
+					
+					} catch (ClassCastException e){
+						out.writeObject(reduce(mapped,4));
+						out.flush();
+						mapped.clear();
 					}
-					finally{
-						lock.unlock();
-					}
+				}
+				finally{
+					lock.unlock();
+				}
+			
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+			}	
 		
-			
-			
-		} catch (ClassNotFoundException e) {
-			
-			e.printStackTrace();
-		}	
-		
-		in.close();
-		out.close();
-		client.close();
-		} catch (IOException e){
-			System.out.println("Sam ting wong");
-		}
+			in.close();
+			out.close();
+			client.close();
+			} catch (IOException e){
+				System.out.println("Sam ting wong");
+			}
 	}
 	
 private static Map<String, Long> reduce(Map<String, Long> load, int topk){

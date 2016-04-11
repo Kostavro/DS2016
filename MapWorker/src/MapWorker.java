@@ -52,9 +52,9 @@ public class MapWorker {
 				e.printStackTrace();
 			}
 		}
-}	
-		
+	}			
 }
+
   class Mapper extends Thread{
 	private static String dbURL = "jdbc:mysql://83.212.117.76:3306/ds_systems_2016?user=omada66&password=omada66db";
 	private static String dbClass = "com.mysql.jdbc.Driver";
@@ -84,6 +84,7 @@ public class MapWorker {
 		}
 		
 	}
+	
 	@Override
 	public void run() {
 		ArrayList<String> order;
